@@ -563,6 +563,11 @@ Contribution by &#64;omarrayyann.</p></li>
 <section id="changed">
 <h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">#</a></h3>
 <ul class="simple">
+<li><p>Changed <code class="docutils literal notranslate"><span class="pre">compute_root_relative_mpkpe</span></code> to re-anchor the reference to the
+robot’s root each step, removing yaw drift as well as translation so it
+measures intrinsic body pose error.</p></li>
+<li><p>Changed <code class="docutils literal notranslate"><span class="pre">compute_joint_velocity_error</span></code> from an L2 norm to a per-joint
+RMS, so it no longer scales with the number of joints.</p></li>
 <li><p>Bumped <code class="docutils literal notranslate"><span class="pre">mujoco</span></code> to 3.8 and <code class="docutils literal notranslate"><span class="pre">mujoco-warp</span></code> to 3.8.0. The <code class="docutils literal notranslate"><span class="pre">multiccd</span></code>
 enable flag was removed in mujoco 3.8 (it became default-on), so configs
 that listed <code class="docutils literal notranslate"><span class="pre">&quot;multiccd&quot;</span></code> in <code class="docutils literal notranslate"><span class="pre">MujocoCfg.enableflags</span></code> need to drop it.</p></li>
@@ -607,12 +612,13 @@ kick).</p></li>
 <section id="fixed">
 <h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading">#</a></h3>
 <ul class="simple">
-<li><p>Fixed the tracking MPKPE metric (<code class="docutils literal notranslate"><span class="pre">compute_mpkpe</span></code>) using the reward’s
-drift-cancelled reference <code class="docutils literal notranslate"><span class="pre">body_pos_relative_w</span></code> instead of the true
-global reference <code class="docutils literal notranslate"><span class="pre">body_pos_w</span></code>. It is documented to measure global-frame
-keypoint error but previously never captured global drift and nearly
-duplicated the root-relative metric. It now uses <code class="docutils literal notranslate"><span class="pre">body_pos_w</span></code>
-(<a class="extlink-issue reference external" href="https://github.com/mujocolab/mjlab/issues/1006">#1006</a>).</p></li>
+<li><p>Fixed the tracking <code class="docutils literal notranslate"><span class="pre">evaluate</span></code> script scoring each metric against the
+next motion frame; the reference is now snapshotted before each step to
+match the reward.</p></li>
+<li><p>Fixed the tracking end-effector metrics silently scoring zero for an
+unknown body name; they now raise <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p></li>
+<li><p>Fixed <code class="docutils literal notranslate"><span class="pre">compute_mpkpe</span></code> measuring root-relative instead of global error;
+it now uses the global reference <code class="docutils literal notranslate"><span class="pre">body_pos_w</span></code> (<a class="extlink-issue reference external" href="https://github.com/mujocolab/mjlab/issues/1006">#1006</a>).</p></li>
 <li><p>Fixed heavy flicker in offscreen training videos on rough-terrain tasks.
 The renderer recomputed its context “neighbor” robots every frame from
 <code class="docutils literal notranslate"><span class="pre">env_origins</span></code>, which the terrain curriculum mutates on reset, so the
