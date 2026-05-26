@@ -467,7 +467,7 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#upcoming-version-not-yet-released">Upcoming version (not yet released)</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-4-0-may-26-2026">Version 1.4.0 (May 26, 2026)</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added">Added</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#changed">Changed</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed">Fixed</a></li>
@@ -511,8 +511,8 @@ document.write(`
                   
   <section id="changelog">
 <h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">#</a></h1>
-<section id="upcoming-version-not-yet-released">
-<h2>Upcoming version (not yet released)<a class="headerlink" href="#upcoming-version-not-yet-released" title="Link to this heading">#</a></h2>
+<section id="version-1-4-0-may-26-2026">
+<h2>Version 1.4.0 (May 26, 2026)<a class="headerlink" href="#version-1-4-0-may-26-2026" title="Link to this heading">#</a></h2>
 <section id="added">
 <h3>Added<a class="headerlink" href="#added" title="Link to this heading">#</a></h3>
 <ul class="simple">
@@ -629,6 +629,12 @@ kick).</p></li>
 <section id="fixed">
 <h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading">#</a></h3>
 <ul class="simple">
+<li><p>Removed use of deprecated <code class="docutils literal notranslate"><span class="pre">warp-lang</span></code> symbols (<code class="docutils literal notranslate"><span class="pre">wp.context.runtime</span></code>
+and <code class="docutils literal notranslate"><span class="pre">wp.context.Device</span></code>) that were dropped in newer <code class="docutils literal notranslate"><span class="pre">warp-lang</span></code>
+releases, causing <code class="docutils literal notranslate"><span class="pre">AttributeError:</span> <span class="pre">module</span> <span class="pre">'warp'</span> <span class="pre">has</span> <span class="pre">no</span> <span class="pre">attribute</span>
+<span class="pre">'context'</span></code> at import/runtime. mjlab now uses
+<code class="docutils literal notranslate"><span class="pre">wp.get_cuda_driver_version()</span></code> and <code class="docutils literal notranslate"><span class="pre">wp.Device</span></code> instead
+(<a class="extlink-issue reference external" href="https://github.com/mujocolab/mjlab/issues/967">#967</a>). Contribution by &#64;rdeits.</p></li>
 <li><p>Fixed the tracking <code class="docutils literal notranslate"><span class="pre">evaluate</span></code> script scoring each metric against the
 next motion frame; the reference is now snapshotted before each step to
 match the reward.</p></li>
@@ -1240,7 +1246,7 @@ Contribution by <a class="reference external" href="https://github.com/oxkitsune
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#upcoming-version-not-yet-released">Upcoming version (not yet released)</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-1-4-0-may-26-2026">Version 1.4.0 (May 26, 2026)</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added">Added</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#changed">Changed</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed">Fixed</a></li>
