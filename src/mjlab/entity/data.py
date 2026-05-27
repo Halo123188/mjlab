@@ -136,7 +136,7 @@ class EntityData:
     self,
     position: torch.Tensor,
     velocity: torch.Tensor,
-    joint_ids: torch.Tensor | slice | None = None,
+    joint_ids: Sequence[int] | torch.Tensor | slice | None = None,
     env_ids: torch.Tensor | slice | None = None,
   ) -> None:
     if not self.is_articulated:
@@ -148,7 +148,7 @@ class EntityData:
   def write_joint_position(
     self,
     position: torch.Tensor,
-    joint_ids: torch.Tensor | slice | None = None,
+    joint_ids: Sequence[int] | torch.Tensor | slice | None = None,
     env_ids: torch.Tensor | slice | None = None,
   ) -> None:
     if not self.is_articulated:
@@ -162,7 +162,7 @@ class EntityData:
   def write_joint_velocity(
     self,
     velocity: torch.Tensor,
-    joint_ids: torch.Tensor | slice | None = None,
+    joint_ids: Sequence[int] | torch.Tensor | slice | None = None,
     env_ids: torch.Tensor | slice | None = None,
   ) -> None:
     if not self.is_articulated:
@@ -177,7 +177,7 @@ class EntityData:
     self,
     force: torch.Tensor | None,
     torque: torch.Tensor | None,
-    body_ids: Sequence[int] | slice | None = None,
+    body_ids: Sequence[int] | torch.Tensor | slice | None = None,
     env_ids: torch.Tensor | slice | None = None,
   ) -> None:
     env_ids = self._resolve_env_ids(env_ids)
