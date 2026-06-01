@@ -577,6 +577,10 @@ beams’ angular coverage.</p></li>
 threshold, where the stone grid re-tiled as its spacing crossed an integer
 boundary, and leaving an oversized gap around the center platform. The grid is
 now difficulty-independent and the platform snaps to it as a clean island.</p></li>
+<li><p>Fixed <code class="docutils literal notranslate"><span class="pre">train</span> <span class="pre">--video</span></code>, <code class="docutils literal notranslate"><span class="pre">play</span></code>, and <code class="docutils literal notranslate"><span class="pre">demo</span></code> crashing with <code class="docutils literal notranslate"><span class="pre">OpenGL</span>
+<span class="pre">platform</span> <span class="pre">library</span> <span class="pre">not</span> <span class="pre">loaded</span></code> on headless Linux hosts that don’t pre-set
+<code class="docutils literal notranslate"><span class="pre">MUJOCO_GL</span></code>. The default is now applied in <code class="docutils literal notranslate"><span class="pre">mjlab/__init__.py</span></code> (Linux
+only) so it takes effect before mujoco’s GL backend selection runs.</p></li>
 </ul>
 </section>
 </section>
@@ -810,9 +814,9 @@ damping (<code class="docutils literal notranslate"><span class="pre">f</span> <
 used by position and velocity actuators. Maps to <code class="docutils literal notranslate"><span class="pre">&lt;joint</span> <span class="pre">damping&gt;</span></code> for
 JOINT transmission and <code class="docutils literal notranslate"><span class="pre">&lt;tendon</span> <span class="pre">damping&gt;</span></code> for TENDON transmission.
 Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code> (preserves the XML value).</p></li>
-<li><p>Added <a class="reference internal" href="api/managers.html#mjlab.managers.RecorderManager" title="mjlab.managers.RecorderManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">RecorderManager</span></code></a> for logging observations,
+<li><p>Added <code class="xref py py-class docutils literal notranslate"><span class="pre">RecorderManager</span></code> for logging observations,
 actions, or arbitrary environment data during rollouts. Implement a
-<a class="reference internal" href="api/managers.html#mjlab.managers.RecorderTerm" title="mjlab.managers.RecorderTerm"><code class="xref py py-class docutils literal notranslate"><span class="pre">RecorderTerm</span></code></a> subclass and register it in the
+<code class="xref py py-class docutils literal notranslate"><span class="pre">RecorderTerm</span></code> subclass and register it in the
 <code class="docutils literal notranslate"><span class="pre">recorders</span></code> dict on <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg</span></code>. The manager provides
 <code class="docutils literal notranslate"><span class="pre">record_pre_reset</span></code>, <code class="docutils literal notranslate"><span class="pre">record_post_reset</span></code>, and <code class="docutils literal notranslate"><span class="pre">record_post_step</span></code>
 lifecycle hooks with no opinion on how data is stored.</p></li>
