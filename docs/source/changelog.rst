@@ -34,6 +34,10 @@ Changed
   heights. Rings are colored by height (like the other terrains) and the outer
   border matches the ring height.
 - Terrain generation no longer prints timing information to stdout.
+- Command delay on fusable actuators (ideal PD, DC motor) now applies one shared
+  lag per environment across all fused actuators sharing a delay config, matching
+  the built-in actuator path, rather than an independent lag per actuator group
+  (:issue:`1035`).
 
 Fixed
 ^^^^^
@@ -64,6 +68,12 @@ Fixed
   platform library not loaded`` on headless Linux hosts that don't pre-set
   ``MUJOCO_GL``. The default is now applied in ``mjlab/__init__.py`` (Linux
   only) so it takes effect before mujoco's GL backend selection runs.
+- Fixed a crash when using command delay on ideal PD (or other custom)
+  actuators whenever ``num_envs`` differed from the number of delayed targets
+  (:issue:`1035`).
+- Ideal PD and DC motor actuators sharing a transmission and delay config are
+  now fused into a single gather, delay, control-law evaluation, and control
+  write, removing per-group host overhead (:issue:`1035`).
 
 Version 1.4.0 (May 26, 2026)
 ----------------------------

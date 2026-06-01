@@ -80,6 +80,23 @@ def test_circular_buffer_first_append_fills(device):
   assert torch.equal(cl.cpu(), torch.tensor([1, 1]))
 
 
+def test_first_append_fills_multidim_features(device):
+  """Backfill broadcasts over arbitrary trailing dims when batch != features.
+
+  Regression for the 2D-only ``torch.where`` backfill, which raised when fed
+  the (batch, targets, 3) command tensors produced by actuator delay with
+  ``num_envs != num_targets``.
+  """
+  batch, targets = 4096, 6
+  buffer = CircularBuffer(max_len=4, batch_size=batch, device=device)
+  first = torch.randn(batch, targets, 3, device=device)
+  buffer.append(first)
+
+  # Every history slot (including the deepest lag) holds the first frame.
+  oldest = buffer[torch.full((batch,), 3, dtype=torch.long, device=device)]
+  assert torch.equal(oldest, first)
+
+
 def test_current_length_counts_and_clamps(device):
   """current_length counts per-batch valid frames and clamps to max_len."""
   buffer = CircularBuffer(max_len=4, batch_size=3, device=device)
