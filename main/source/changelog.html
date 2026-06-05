@@ -559,6 +559,10 @@ border matches the ring height.</p></li>
 model field (e.g. two <code class="docutils literal notranslate"><span class="pre">dr.geom_size</span></code> events scaling axis 0 and axis 1
 separately) silently clobbering each other. Each event now writes back only
 the axes it targeted, so per-axis events compose (<a class="extlink-issue reference external" href="https://github.com/mujocolab/mjlab/issues/1042">#1042</a>).</p></li>
+<li><p>Regenerated the bundled MuJoCo type stubs, which had drifted from the
+installed mujoco version. CI now regenerates them and fails if they are
+stale, so they stay in sync going forward. Run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">stubs</span></code> to update them
+(<a class="extlink-issue reference external" href="https://github.com/mujocolab/mjlab/issues/1048">#1048</a>).</p></li>
 <li><p>Fixed <code class="docutils literal notranslate"><span class="pre">select_gpus</span></code> crashing when <code class="docutils literal notranslate"><span class="pre">CUDA_VISIBLE_DEVICES</span></code> contains MIG UUIDs instead of numeric indices.</p></li>
 <li><p>Fixed pyramid-stairs terrains (<code class="docutils literal notranslate"><span class="pre">BoxPyramidStairsTerrainCfg</span></code>,
 <code class="docutils literal notranslate"><span class="pre">BoxInvertedPyramidStairsTerrainCfg</span></code>, and <code class="docutils literal notranslate"><span class="pre">BoxOpenStairsTerrainCfg</span></code>)
