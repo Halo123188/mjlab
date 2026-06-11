@@ -2158,5 +2158,20 @@
       "ee_pos_error": 0.04671516269445419,
       "ee_ori_error": 0.16490206122398376
     }
+  },
+  {
+    "id": "kerl5x7q",
+    "name": "2026-06-11_02-24-02",
+    "url": "https://wandb.ai/gcbc_researchers/mjlab/runs/kerl5x7q",
+    "created_at": "2026-06-11T09:24:06Z",
+    "commit": "0cdc562",
+    "metrics": {
+      "success_rate": 0.97265625,
+      "mpkpe": 0.10604427754878998,
+      "r_mpkpe": 0.03136477246880531,
+      "joint_vel_error": 0.5558209419250488,
+      "ee_pos_error": 0.04734722524881363,
+      "ee_ori_error": 0.1769428551197052
+    }
   }
 ]
