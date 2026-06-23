@@ -1168,27 +1168,25 @@ single row of memory. Indexing with ``tensor[env_id]`` makes it look like
 each world has its own data, but writes to any world affect all of them because
 they all point to the same underlying memory.
 
-To give each world independent values, the underlying Warp array is
-**expanded** from shape ``(1, N)`` to ``(num_worlds, N)`` with real
-per-world memory and normal strides. ``sim.expand_model_fields()``
-allocates a new array, copies the shared data into each world's row, and
-replaces the old array on the model. After expansion, writes to one world no
+To give each world independent values, the underlying Warp array is allocated
+with shape ``(num_worlds, N)`` -- real per-world memory and normal strides --
+right when the model is built, via ``put_model(batch_sizes=...)``. The shared
+base value is broadcast into every world's row, so writes to one world no
 longer affect others and each world can have its own friction, mass, or
 damping values.
 
 Each ``dr`` function declares which fields it needs via the
-``@requires_model_fields`` decorator, and the ``EventManager`` collects these
-at startup so expansion happens automatically. Custom DR terms that directly
-modify model arrays must ensure those arrays have been expanded. Either
-decorate the function with ``@requires_model_fields`` or call
-``sim.expand_model_fields()`` manually.
+``@requires_model_fields`` decorator. ``collect_domain_randomization_fields``
+gathers these from the event config before the simulation is built, and the
+``Simulation`` passes them to ``put_model`` so the per-world arrays exist up
+front. Custom DR terms that directly modify model arrays must decorate their
+function with ``@requires_model_fields`` so the fields are allocated per-world.
 
 .. note::
 
-   Expanding a field allocates new GPU memory and invalidates any captured CUDA
-   graph because the graph holds pointers to the old arrays. mjlab recreates
-   the graph automatically after expansion. This is a one-time cost at
-   environment startup, not per-episode.
+   Because the per-world arrays are allocated up front, the captured CUDA graph
+   already points at them; randomization writes into those arrays rather than
+   replacing them, so no graph recapture is needed.
 
 Why not just recompile the model?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

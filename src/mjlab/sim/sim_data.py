@@ -240,7 +240,7 @@ class WarpBridge(Generic[T]):
   def clear_cache(self) -> None:
     """Clear the wrapped cache to force re-wrapping of arrays.
 
-    This should be called after operations that modify the underlying warp arrays,
-    such as expand_model_fields(), to ensure the cache reflects the updated arrays.
+    This should be called after operations that replace the underlying warp
+    arrays, to ensure the cache reflects the updated arrays.
     """
     object.__setattr__(self, "_wrapped_cache", {})

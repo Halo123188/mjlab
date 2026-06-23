@@ -70,9 +70,14 @@ def create_env(device, fields, num_envs=NUM_ENVS):
   scene = Scene(scene_cfg, device)
   model = scene.compile()
 
-  sim = Simulation(num_envs=num_envs, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(model, sim.model, sim.data)
-  sim.expand_model_fields(fields)
+  sim = Simulation(
+    num_envs=num_envs,
+    cfg=SimulationCfg(),
+    model=model,
+    device=device,
+    per_world_fields=fields,
+  )
+  scene.initialize(model, sim.model, sim.data, expanded_fields=sim.expanded_fields)
 
   return Env(scene, sim, device)
 
@@ -852,8 +857,13 @@ def test_body_mass_recompute_matches_set_const(device):
     "dof_invweight0",
     "body_invweight0",
   )
-  sim = Simulation(num_envs=1, cfg=SimulationCfg(), model=gpu_model, device=device)
-  sim.expand_model_fields(expand_fields)
+  sim = Simulation(
+    num_envs=1,
+    cfg=SimulationCfg(),
+    model=gpu_model,
+    device=device,
+    per_world_fields=expand_fields,
+  )
   sim.model.body_mass[0, link1_id] = 5.0
   sim.recompute_constants(RecomputeLevel.set_const)
 
@@ -884,8 +894,13 @@ def test_body_ipos_recompute_matches_set_const(device):
     "dof_invweight0",
     "body_invweight0",
   )
-  sim = Simulation(num_envs=1, cfg=SimulationCfg(), model=gpu_model, device=device)
-  sim.expand_model_fields(expand_fields)
+  sim = Simulation(
+    num_envs=1,
+    cfg=SimulationCfg(),
+    model=gpu_model,
+    device=device,
+    per_world_fields=expand_fields,
+  )
   sim.model.body_ipos[0, link1_id, 0] += 0.05
   sim.recompute_constants(RecomputeLevel.set_const)
 
@@ -924,8 +939,13 @@ def test_dof_armature_recompute_matches_recompile(device):
     "tendon_length0",
     "tendon_invweight0",
   )
-  sim = Simulation(num_envs=1, cfg=SimulationCfg(), model=original_model, device=device)
-  sim.expand_model_fields(expand_fields)
+  sim = Simulation(
+    num_envs=1,
+    cfg=SimulationCfg(),
+    model=original_model,
+    device=device,
+    per_world_fields=expand_fields,
+  )
 
   dof_adr = original_model.jnt_dofadr[joint1_id]
   sim.model.dof_armature[0, dof_adr] = 1.0

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import enum
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
@@ -71,8 +71,9 @@ def requires_model_fields(
 ) -> Callable[[F], F]:
   """Mark an event function as requiring specific model fields expanded per-world.
 
-  Fields listed here are registered in ``EventManager.domain_randomization_fields``
-  so that ``sim.expand_model_fields()`` allocates real per-world memory for them.
+  Fields listed here are collected by ``collect_domain_randomization_fields`` and
+  passed to ``put_model(batch_sizes=...)`` so the per-world arrays are allocated up
+  front, letting the function write each env independently.
 
   Args:
     *fields: Model field names to expand per-world.
@@ -138,6 +139,26 @@ class EventTermCfg(ManagerTermBaseCfg):
   """Minimum environment steps between triggers. Prevents the event from firing
   too frequently when episodes reset rapidly. Only applies to ``mode="reset"``.
   Set to 0 (default) to trigger on every reset."""
+
+
+def collect_domain_randomization_fields(
+  cfg: Mapping[str, EventTermCfg | None],
+) -> tuple[str, ...]:
+  """Collect the model fields domain randomization writes per-world.
+
+  Derived purely from the ``@requires_model_fields`` metadata on each event
+  term's function, so it can be computed from config alone -- before the
+  simulation is built -- and handed to ``put_model`` so the per-world arrays are
+  allocated up front instead of being expanded after the fact.
+  """
+  fields: list[str] = []
+  for term_cfg in cfg.values():
+    if term_cfg is None:
+      continue
+    for field in getattr(term_cfg.func, "model_fields", ()):
+      if field not in fields:
+        fields.append(field)
+  return tuple(fields)
 
 
 class EventManager(ManagerBase):
@@ -342,6 +363,9 @@ class EventManager(ManagerBase):
     self._interval_term_time_left: list[torch.Tensor] = list()
     self._reset_term_last_triggered_step_id: list[torch.Tensor] = list()
     self._reset_term_last_triggered_once: list[torch.Tensor] = list()
+    self._domain_randomization_fields = list(
+      collect_domain_randomization_fields(self.cfg)
+    )
 
     for term_name, term_cfg in self.cfg.items():
       term_cfg: EventTermCfg | None
@@ -377,9 +401,3 @@ class EventManager(ManagerBase):
         self._reset_term_last_triggered_step_id.append(step_count)
         no_trigger = torch.zeros(self.num_envs, device=self.device, dtype=torch.bool)
         self._reset_term_last_triggered_once.append(no_trigger)
-
-      func = term_cfg.func
-      if hasattr(func, "model_fields"):
-        for field in func.model_fields:
-          if field not in self._domain_randomization_fields:
-            self._domain_randomization_fields.append(field)

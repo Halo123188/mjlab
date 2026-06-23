@@ -1278,6 +1278,9 @@ def test_viser_builds_per_world_mesh_handles_for_variants():
   from contextlib import nullcontext
 
   from mjlab.envs import ManagerBasedRlEnv, ManagerBasedRlEnvCfg
+  from mjlab.envs.mdp import dr
+  from mjlab.managers.event_manager import EventTermCfg
+  from mjlab.managers.scene_entity_config import SceneEntityCfg
   from mjlab.scene import SceneCfg
   from mjlab.terrains import TerrainEntityCfg
   from mjlab.viewer.viser.scene import MjlabViserScene, _PerWorldMeshGroup
@@ -1348,11 +1351,22 @@ def test_viser_builds_per_world_mesh_handles_for_variants():
         )
       },
     ),
+    # Declares ``geom_rgba`` as a per-world field so the test can paint a
+    # distinct color per env below; the sampled values are overwritten.
+    events={
+      "rgba": EventTermCfg(
+        func=dr.geom_rgba,
+        mode="startup",
+        params={
+          "asset_cfg": SceneEntityCfg("object"),
+          "ranges": (0.2, 0.9),
+        },
+      ),
+    },
   )
 
   env = ManagerBasedRlEnv(cfg=env_cfg, device="cpu")
   try:
-    env.sim.expand_model_fields(("geom_rgba",))
     env.sim.model.geom_rgba[:, :, :3] = torch.linspace(
       0.2,
       0.9,

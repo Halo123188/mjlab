@@ -164,6 +164,7 @@ class Scene:
     mj_model: mujoco.MjModel,
     model: mjwarp.Model,
     data: mjwarp.Data,
+    expanded_fields: set[str] | None = None,
   ):
     self._default_env_origins = torch.zeros(
       (self._cfg.num_envs, 3), device=self._device, dtype=torch.float32
@@ -185,6 +186,7 @@ class Scene:
         camera_sensors=camera_sensors,
         raycast_sensors=raycast_sensors,
         device=self._device,
+        expanded_fields=expanded_fields,
       )
 
   def reset(self, env_ids: torch.Tensor | slice | None = None) -> None:

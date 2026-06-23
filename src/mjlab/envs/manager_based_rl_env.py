@@ -21,7 +21,11 @@ from mjlab.managers.curriculum_manager import (
   CurriculumTermCfg,
   NullCurriculumManager,
 )
-from mjlab.managers.event_manager import EventManager, EventTermCfg
+from mjlab.managers.event_manager import (
+  EventManager,
+  EventTermCfg,
+  collect_domain_randomization_fields,
+)
 from mjlab.managers.metrics_manager import (
   MetricsManager,
   MetricsTermCfg,
@@ -200,12 +204,14 @@ class ManagerBasedRlEnv:
       spec=self.scene.spec,
       variant_info=self.scene.collect_variant_info(),
       device=device,
+      per_world_fields=collect_domain_randomization_fields(self.cfg.events),
     )
 
     self.scene.initialize(
       mj_model=self.sim.mj_model,
       model=self.sim.model,
       data=self.sim.data,
+      expanded_fields=self.sim.expanded_fields,
     )
 
     # Wire sensor context to simulation for sense_graph.
@@ -303,10 +309,10 @@ class ManagerBasedRlEnv:
     then action and observation managers, then other RL managers.
     """
     # Event manager (required before everything else for domain randomization).
+    # The per-world model fields it randomizes were already allocated at
+    # ``Simulation`` construction via ``collect_domain_randomization_fields``.
     self.event_manager = EventManager(self.cfg.events, self)
     print_info(f"[INFO] {self.event_manager}")
-
-    self.sim.expand_model_fields(self.event_manager.domain_randomization_fields)
 
     # Command manager (must be before observation manager since observations
     # may reference commands).

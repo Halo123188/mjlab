@@ -94,7 +94,12 @@ def _robot_xml(site_euler: str = "0 0 0") -> str:
   """
 
 
-def _build(xml: str, device: str, num_envs: int = 2):
+def _build(
+  xml: str,
+  device: str,
+  num_envs: int = 2,
+  domain_randomization_fields: tuple[str, ...] = (),
+):
   entity_cfg = EntityCfg(spec_fn=lambda: mujoco.MjSpec.from_string(xml))
   scene = Scene(
     SceneCfg(num_envs=num_envs, env_spacing=3.0, entities={"robot": entity_cfg}),
@@ -102,9 +107,15 @@ def _build(xml: str, device: str, num_envs: int = 2):
   )
   model = scene.compile()
   sim = Simulation(
-    num_envs=num_envs, cfg=SimulationCfg(njmax=20), model=model, device=device
+    num_envs=num_envs,
+    cfg=SimulationCfg(njmax=20),
+    model=model,
+    device=device,
+    per_world_fields=domain_randomization_fields,
   )
-  scene.initialize(sim.mj_model, sim.model, sim.data)
+  scene.initialize(
+    sim.mj_model, sim.model, sim.data, expanded_fields=sim.expanded_fields
+  )
   return scene, sim
 
 
@@ -182,8 +193,9 @@ def test_site_quat_randomization_changes_sensor(device):
   This is what the G1 example configs rely on -- randomizing the IMU site orientation
   must show up in the sensor-based projected gravity, per-environment.
   """
-  scene, sim = _build(_robot_xml(), device, num_envs=4)
-  sim.expand_model_fields(("site_quat",))
+  scene, sim = _build(
+    _robot_xml(), device, num_envs=4, domain_randomization_fields=("site_quat",)
+  )
   env = _make_env(scene, sim, device)
 
   sim.forward()

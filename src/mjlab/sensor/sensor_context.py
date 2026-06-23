@@ -52,6 +52,7 @@ class SensorContext:
     camera_sensors: list[CameraSensor],
     raycast_sensors: Sequence[RayCastSensor],
     device: str,
+    expanded_fields: set[str] | None = None,
   ):
     self._model = model
     self._data = data
@@ -76,7 +77,9 @@ class SensorContext:
     self._rgb_adr_np: list[int] | None = None
     self._depth_adr_np: list[int] | None = None
     self._seg_adr_np: list[int] | None = None
-    self._disable_precomputed_rays = False
+    # When camera intrinsics are randomized per-world, rays can't be precomputed
+    # once from shared parameters; they must be recomputed each step.
+    self._disable_precomputed_rays = bool((expanded_fields or set()) & _RAY_FIELDS)
     self._create_context(mj_model)
 
     # Wire up sensors to use this context.
@@ -96,19 +99,6 @@ class SensorContext:
   @property
   def render_context(self) -> mjwarp.RenderContext:
     return self._ctx
-
-  def recreate(
-    self,
-    mj_model: mujoco.MjModel,
-    expanded_fields: set[str] | None = None,
-  ) -> None:
-    """Recreate the render context after model fields are expanded.
-
-    Called by Simulation.expand_model_fields() for domain randomization.
-    """
-    if expanded_fields is not None:
-      self._disable_precomputed_rays = bool(expanded_fields & _RAY_FIELDS)
-    self._create_context(mj_model)
 
   def prepare(self) -> None:
     """Pre-graph: transform rays to world frame."""

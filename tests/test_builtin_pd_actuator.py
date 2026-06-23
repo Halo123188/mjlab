@@ -236,7 +236,12 @@ def test_reset_clears_delay_buffer(device):
 # ---------------------------------------------------------------------------
 
 
-def _scene_env(device, transmission=TransmissionType.JOINT, num_envs=2):
+def _scene_env(
+  device,
+  transmission=TransmissionType.JOINT,
+  num_envs=2,
+  domain_randomization_fields=(),
+):
   """Build a real scene/sim with one BuiltinPd-driven entity for DR tests."""
   if transmission == TransmissionType.JOINT:
     xml = ROBOT_XML
@@ -271,8 +276,14 @@ def _scene_env(device, transmission=TransmissionType.JOINT, num_envs=2):
   scene_cfg = SceneCfg(num_envs=num_envs, entities={"robot": entity_cfg})
   scene = Scene(scene_cfg, device)
   model = scene.compile()
-  sim = Simulation(num_envs=num_envs, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(model, sim.model, sim.data)
+  sim = Simulation(
+    num_envs=num_envs,
+    cfg=SimulationCfg(),
+    model=model,
+    device=device,
+    per_world_fields=domain_randomization_fields,
+  )
+  scene.initialize(model, sim.model, sim.data, expanded_fields=sim.expanded_fields)
 
   env = Mock()
   env.num_envs = num_envs
@@ -283,16 +294,15 @@ def _scene_env(device, transmission=TransmissionType.JOINT, num_envs=2):
 
 
 def test_dr_pd_gains_scales_halves_independently(device):
-  env = _scene_env(device)
+  env = _scene_env(
+    device, domain_randomization_fields=("actuator_gainprm", "actuator_biasprm")
+  )
   robot = env.scene["robot"]
   act = robot.actuators[0]
   assert isinstance(act, BuiltinPdActuator)
   n = act.num_targets
   pos_ids = act.global_ctrl_ids[:n]
   vel_ids = act.global_ctrl_ids[n:]
-
-  # Expand fields so DR can write per-env.
-  env.sim.expand_model_fields(("actuator_gainprm", "actuator_biasprm"))
 
   dr.pd_gains(
     env,
@@ -336,14 +346,15 @@ def test_dr_pd_gains_scales_halves_independently(device):
 
 
 def test_dr_pd_gains_abs_writes_correct_columns(device):
-  env = _scene_env(device)
+  env = _scene_env(
+    device, domain_randomization_fields=("actuator_gainprm", "actuator_biasprm")
+  )
   robot = env.scene["robot"]
   act = robot.actuators[0]
   assert isinstance(act, BuiltinPdActuator)
   n = act.num_targets
   pos_ids = act.global_ctrl_ids[:n]
   vel_ids = act.global_ctrl_ids[n:]
-  env.sim.expand_model_fields(("actuator_gainprm", "actuator_biasprm"))
 
   dr.pd_gains(
     env,
@@ -378,13 +389,18 @@ def test_dr_pd_gains_abs_writes_correct_columns(device):
 
 
 def test_dr_effort_limits_writes_jnt_actfrcrange(device):
-  env = _scene_env(device, transmission=TransmissionType.JOINT)
+  env = _scene_env(
+    device,
+    transmission=TransmissionType.JOINT,
+    domain_randomization_fields=(
+      "actuator_forcerange",
+      "jnt_actfrcrange",
+      "tendon_actfrcrange",
+    ),
+  )
   robot = env.scene["robot"]
   act = robot.actuators[0]
   assert isinstance(act, BuiltinPdActuator)
-  env.sim.expand_model_fields(
-    ("actuator_forcerange", "jnt_actfrcrange", "tendon_actfrcrange")
-  )
 
   joint_ids = robot.indexing.joint_ids[act.target_ids]
   pre_forcerange = env.sim.model.actuator_forcerange.clone()
@@ -414,13 +430,18 @@ def test_dr_effort_limits_writes_jnt_actfrcrange(device):
 
 def test_dr_effort_limits_scale_multiplies_default(device):
   """``scale`` multiplies the configured ``effort_limit`` (50.0) by the sample."""
-  env = _scene_env(device, transmission=TransmissionType.JOINT)
+  env = _scene_env(
+    device,
+    transmission=TransmissionType.JOINT,
+    domain_randomization_fields=(
+      "actuator_forcerange",
+      "jnt_actfrcrange",
+      "tendon_actfrcrange",
+    ),
+  )
   robot = env.scene["robot"]
   act = robot.actuators[0]
   assert isinstance(act, BuiltinPdActuator)
-  env.sim.expand_model_fields(
-    ("actuator_forcerange", "jnt_actfrcrange", "tendon_actfrcrange")
-  )
   joint_ids = robot.indexing.joint_ids[act.target_ids]
 
   dr.effort_limits(
@@ -440,13 +461,18 @@ def test_dr_effort_limits_scale_multiplies_default(device):
 
 
 def test_dr_effort_limits_writes_tendon_actfrcrange(device):
-  env = _scene_env(device, transmission=TransmissionType.TENDON)
+  env = _scene_env(
+    device,
+    transmission=TransmissionType.TENDON,
+    domain_randomization_fields=(
+      "actuator_forcerange",
+      "jnt_actfrcrange",
+      "tendon_actfrcrange",
+    ),
+  )
   robot = env.scene["robot"]
   act = robot.actuators[0]
   assert isinstance(act, BuiltinPdActuator)
-  env.sim.expand_model_fields(
-    ("actuator_forcerange", "jnt_actfrcrange", "tendon_actfrcrange")
-  )
   tendon_ids = robot.indexing.tendon_ids[act.target_ids]
 
   dr.effort_limits(

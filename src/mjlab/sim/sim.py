@@ -12,7 +12,6 @@ import warp as wp
 
 from mjlab.entity.variants import VARIANT_DEPENDENT_FIELDS, build_variant_model
 from mjlab.managers.event_manager import RecomputeLevel
-from mjlab.sim.randomization import expand_model_fields
 from mjlab.sim.sim_data import TorchArray, WarpBridge
 from mjlab.utils.nan_guard import NanGuard, NanGuardCfg
 
@@ -169,10 +168,11 @@ class Simulation:
   kernel dispatches.
 
   **Important:** A captured graph holds pointers to the GPU arrays that existed
-  at capture time. If those arrays are later replaced (e.g., via
-  ``expand_model_fields()``), the graph will still read from the old arrays,
-  silently ignoring any new values. The ``expand_model_fields()`` method handles
-  this automatically by calling ``create_graph()`` after replacing arrays.
+  at capture time. If those arrays are later replaced, the graph will still read
+  from the old arrays, silently ignoring any new values. Per-world domain
+  randomization fields avoid this by being allocated up front via
+  ``put_model(batch_sizes=...)``, so randomization writes into the captured
+  arrays rather than replacing them.
 
   If you write code that replaces model or data arrays after simulation
   initialization, you **must** call ``create_graph()`` afterward to re-capture
@@ -188,11 +188,17 @@ class Simulation:
     *,
     spec: mujoco.MjSpec | None = None,
     variant_info: list[tuple[str, VariantMetadata]] | None = None,
+    per_world_fields: tuple[str, ...] = (),
   ):
     self.cfg = cfg
     self.device = device
     self.wp_device = wp.get_device(self.device)
     self.num_envs = num_envs
+    # Model fields needing independent per-world storage (e.g. for domain
+    # randomization). Allocated with a per-world leading dimension up front via
+    # ``put_model(batch_sizes=...)`` so callers can write each env independently
+    # without replacing arrays afterward.
+    self._per_world_fields = tuple(per_world_fields)
     self._default_model_fields: dict[str, torch.Tensor] = {}
     # Fields whose DR baseline is per-world (DR's `_select_default_values`
     # uses this to know whether to index `[env, ...]` vs `[...]`).
@@ -226,8 +232,11 @@ class Simulation:
     mujoco.mj_forward(self._mj_model, self._mj_data)
 
     with wp.ScopedDevice(self.wp_device):
-      self._wp_model = mjwarp.put_model(self._mj_model)
+      self._wp_model = mjwarp.put_model(
+        self._mj_model, batch_sizes=self._per_world_batch_sizes()
+      )
       self._wp_model.opt.contact_sensor_maxmatch = self.cfg.contact_sensor_maxmatch
+      self._expanded_fields.update(self._per_world_fields)
       self._finish_init()
 
   def _init_with_variants(
@@ -249,6 +258,7 @@ class Simulation:
         self.num_envs,
         variant_info,
         configure_model=self.cfg.mujoco.apply,
+        per_world_fields=self._per_world_fields,
       )
       self._mj_model = result.mj_model
       self._mj_data = mujoco.MjData(self._mj_model)
@@ -273,6 +283,7 @@ class Simulation:
     self._expanded_fields.update(VARIANT_DEPENDENT_FIELDS)
     self._expanded_fields.add("geom_dataid")
     self._expanded_fields.add("geom_matid")
+    self._expanded_fields.update(self._per_world_fields)
 
     # Stash variant assignments as torch tensors keyed by bare entity name
     # (build_variant_model emits "<name>/" prefixes; strip the trailing slash for
@@ -315,7 +326,7 @@ class Simulation:
 
     Called automatically by:
     - ``__init__()`` during simulation initialization
-    - ``expand_model_fields()`` after replacing model arrays
+    - ``set_sensor_context()`` after wiring the sense pipeline
 
     On CPU devices or when memory pools are disabled, this is a no-op.
     """
@@ -392,25 +403,12 @@ class Simulation:
 
   # Methods.
 
-  def expand_model_fields(self, fields: tuple[str, ...]) -> None:
-    """Expand model fields to support per-environment parameters."""
-    if not fields:
-      return
-
-    invalid_fields = [f for f in fields if not hasattr(self._mj_model, f)]
-    if invalid_fields:
-      raise ValueError(f"Fields not found in model: {invalid_fields}")
-
-    expand_model_fields(self._wp_model, self.num_envs, list(fields))
-    self._expanded_fields.update(fields)
-    self._model_bridge.clear_cache()
-
-    if self._sensor_context is not None:
-      self._sensor_context.recreate(self._mj_model, self._expanded_fields)
-
-    # Field expansion allocates new arrays and replaces them via setattr. The
-    # CUDA graph captured the old memory addresses, so we must recreate it.
-    self.create_graph()
+  def _per_world_batch_sizes(self) -> dict[str, int]:
+    """Per-world ``put_model`` batch sizes for fields needing per-world storage."""
+    invalid = [f for f in self._per_world_fields if not hasattr(self._mj_model, f)]
+    if invalid:
+      raise ValueError(f"Per-world fields not found in model: {invalid}")
+    return {field: self.num_envs for field in self._per_world_fields}
 
   def get_default_field(self, field: str) -> torch.Tensor:
     """Get the default value for a model field, caching for reuse.

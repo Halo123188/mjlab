@@ -31,6 +31,16 @@ Changed
      The ``SimulationCfg.ls_parallel`` option has been removed, since parallel
      linesearch was removed upstream in MuJoCo Warp. Remove ``ls_parallel`` from
      any ``SimulationCfg`` you construct.
+- Per-world domain randomization fields are now allocated up front via
+  ``mujoco-warp``'s ``put_model(batch_sizes=...)`` instead of being expanded
+  after construction.
+
+  .. warning::
+
+     ``Simulation.expand_model_fields()`` has been removed. Pass the fields that
+     need per-world storage to ``Simulation(per_world_fields=...)`` at
+     construction instead; environments derive them automatically from the
+     event config.
 - Curriculum-mode terrain difficulty is now deterministic across rows
   and reaches the configured ``difficulty_range`` endpoints
   (:issue:`1027`).

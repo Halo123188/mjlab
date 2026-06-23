@@ -496,6 +496,7 @@ def _scene_env(
   device,
   num_envs=2,
   mode: DcMotorInputMode = DcMotorInputMode.POSITION,
+  domain_randomization_fields=(),
 ):
   def spec_fn():
     spec = mujoco.MjSpec.from_string(ROBOT_XML)
@@ -522,8 +523,14 @@ def _scene_env(
   scene_cfg = SceneCfg(num_envs=num_envs, entities={"robot": entity_cfg})
   scene = Scene(scene_cfg, device)
   model = scene.compile()
-  sim = Simulation(num_envs=num_envs, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(model, sim.model, sim.data)
+  sim = Simulation(
+    num_envs=num_envs,
+    cfg=SimulationCfg(),
+    model=model,
+    device=device,
+    per_world_fields=domain_randomization_fields,
+  )
+  scene.initialize(model, sim.model, sim.data, expanded_fields=sim.expanded_fields)
 
   env = Mock()
   env.num_envs = num_envs
@@ -545,12 +552,13 @@ def _scene_env(
 def test_dr_pd_gains_position_mode(
   device, operation, kp_in, kd_in, kp_expected, kd_expected
 ):
-  env = _scene_env(device)
+  env = _scene_env(
+    device, domain_randomization_fields=("actuator_gainprm", "actuator_biasprm")
+  )
   robot = env.scene["robot"]
   act = robot.actuators[0]
   assert isinstance(act, BuiltinDcMotorActuator)
   ctrl_ids = act.global_ctrl_ids
-  env.sim.expand_model_fields(("actuator_gainprm", "actuator_biasprm"))
 
   dr.pd_gains(
     env,
@@ -575,8 +583,11 @@ def test_dr_pd_gains_position_mode(
 
 
 def test_dr_pd_gains_voltage_mode_rejected(device):
-  env = _scene_env(device, mode=DcMotorInputMode.VOLTAGE)
-  env.sim.expand_model_fields(("actuator_gainprm", "actuator_biasprm"))
+  env = _scene_env(
+    device,
+    mode=DcMotorInputMode.VOLTAGE,
+    domain_randomization_fields=("actuator_gainprm", "actuator_biasprm"),
+  )
   with pytest.raises(ValueError, match="VOLTAGE"):
     dr.pd_gains(
       env,
@@ -588,13 +599,17 @@ def test_dr_pd_gains_voltage_mode_rejected(device):
 
 
 def test_dr_effort_limits_writes_forcerange(device):
-  env = _scene_env(device)
+  env = _scene_env(
+    device,
+    domain_randomization_fields=(
+      "actuator_forcerange",
+      "jnt_actfrcrange",
+      "tendon_actfrcrange",
+    ),
+  )
   robot = env.scene["robot"]
   act = robot.actuators[0]
   ctrl_ids = act.global_ctrl_ids
-  env.sim.expand_model_fields(
-    ("actuator_forcerange", "jnt_actfrcrange", "tendon_actfrcrange")
-  )
 
   dr.effort_limits(
     env,

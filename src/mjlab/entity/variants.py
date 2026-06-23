@@ -1319,6 +1319,7 @@ def build_variant_model(
   nworld: int,
   variant_info: list[tuple[str, VariantMetadata]],
   configure_model: Callable[[mujoco.MjModel], None] | None = None,
+  per_world_fields: tuple[str, ...] = (),
 ) -> MeshVariantResult:
   """Build a Warp Model with per-world mesh assignments.
 
@@ -1329,6 +1330,10 @@ def build_variant_model(
       entities that have mesh variants.
     configure_model: Optional callback to configure the compiled
       MjModel before ``put_model`` (e.g., setting solver options).
+    per_world_fields: Model fields that need independent per-world storage
+      (e.g. for domain randomization). Allocated with a per-world leading
+      dimension. Variant-dependent fields are already built per-world below,
+      so they are excluded here to avoid a redundant allocation.
 
   Returns:
     A :class:`MeshVariantResult` containing the warp model, host
@@ -1427,8 +1432,14 @@ def build_variant_model(
     dataid_table[:, slot_geom_ids] = variant_slot_mesh_ids[w2v]
     matid_table[:, slot_geom_ids] = variant_slot_matids[w2v]
 
-  # Build warp model.
-  m = mjwarp.put_model(model)
+  # Build warp model. Fields the variant builder writes per-world below
+  # (variant-dependent fields plus geom_dataid/geom_matid) are excluded from
+  # batch_sizes to avoid allocating them per-world twice.
+  variant_managed = set(VARIANT_DEPENDENT_FIELDS) | {"geom_dataid", "geom_matid"}
+  m = mjwarp.put_model(
+    model,
+    batch_sizes={f: nworld for f in per_world_fields if f not in variant_managed},
+  )
   m.geom_dataid = wp.array(dataid_table, dtype=int)
   m.geom_matid = wp.array(matid_table, dtype=int)
 

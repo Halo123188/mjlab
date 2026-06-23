@@ -38,6 +38,7 @@ def _make_scene_and_sim(
   sensors: tuple,
   xml: str = SCENE_WITH_CAMERA_XML,
   num_envs: int = 2,
+  domain_randomization_fields: tuple[str, ...] = (),
 ) -> tuple[Scene, Simulation]:
   entity_cfg = EntityCfg(spec_fn=lambda: mujoco.MjSpec.from_string(xml))
   scene_cfg = SceneCfg(
@@ -48,8 +49,16 @@ def _make_scene_and_sim(
   )
   scene = Scene(scene_cfg, device)
   model = scene.compile()
-  sim = Simulation(num_envs=num_envs, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(sim.mj_model, sim.model, sim.data)
+  sim = Simulation(
+    num_envs=num_envs,
+    cfg=SimulationCfg(),
+    model=model,
+    device=device,
+    per_world_fields=domain_randomization_fields,
+  )
+  scene.initialize(
+    sim.mj_model, sim.model, sim.data, expanded_fields=sim.expanded_fields
+  )
   if scene.sensor_context is not None:
     sim.set_sensor_context(scene.sensor_context)
   return scene, sim
@@ -271,8 +280,8 @@ INTRINSIC_CAM_XML = """
 """
 
 
-def test_expand_cam_intrinsic_disables_precomputed_rays(device):
-  """Expanding cam_intrinsic disables precomputed rays on the render context."""
+def test_cam_intrinsic_dr_disables_precomputed_rays(device):
+  """Randomizing cam_intrinsic disables precomputed rays on the render context."""
   cam_cfg = CameraSensorCfg(
     name="test_cam",
     camera_name="world/intrinsic_cam",
@@ -280,18 +289,21 @@ def test_expand_cam_intrinsic_disables_precomputed_rays(device):
     height=24,
     data_types=("rgb",),
   )
-  scene, sim = _make_scene_and_sim(device, sensors=(cam_cfg,), xml=INTRINSIC_CAM_XML)
+
+  # Without cam_intrinsic DR: precomputed rays enabled.
+  scene, _ = _make_scene_and_sim(device, sensors=(cam_cfg,), xml=INTRINSIC_CAM_XML)
   assert scene.sensor_context is not None
+  assert scene.sensor_context.render_context.use_precomputed_rays is True
 
-  # Before expansion: precomputed rays enabled.
-  rc = scene.sensor_context.render_context
-  assert rc.use_precomputed_rays is True
-
-  sim.expand_model_fields(("cam_intrinsic",))
-
-  # After expansion: precomputed rays disabled.
-  rc = scene.sensor_context.render_context
-  assert rc.use_precomputed_rays is False
+  # With cam_intrinsic DR: precomputed rays disabled.
+  scene, _ = _make_scene_and_sim(
+    device,
+    sensors=(cam_cfg,),
+    xml=INTRINSIC_CAM_XML,
+    domain_randomization_fields=("cam_intrinsic",),
+  )
+  assert scene.sensor_context is not None
+  assert scene.sensor_context.render_context.use_precomputed_rays is False
 
 
 def test_cam_intrinsic_dr_changes_rendered_image(device):
@@ -304,9 +316,12 @@ def test_cam_intrinsic_dr_changes_rendered_image(device):
     data_types=("rgb",),
   )
   scene, sim = _make_scene_and_sim(
-    device, sensors=(cam_cfg,), xml=INTRINSIC_CAM_XML, num_envs=2
+    device,
+    sensors=(cam_cfg,),
+    xml=INTRINSIC_CAM_XML,
+    num_envs=2,
+    domain_randomization_fields=("cam_intrinsic",),
   )
-  sim.expand_model_fields(("cam_intrinsic",))
 
   # Render baseline.
   sim.forward()

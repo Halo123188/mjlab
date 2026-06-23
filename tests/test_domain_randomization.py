@@ -76,10 +76,14 @@ def create_test_env(
   scene = Scene(scene_cfg, device)
   model = scene.compile()
 
-  sim = Simulation(num_envs=num_envs, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(model, sim.model, sim.data)
-  if expand_fields:
-    sim.expand_model_fields(expand_fields)
+  sim = Simulation(
+    num_envs=num_envs,
+    cfg=SimulationCfg(),
+    model=model,
+    device=device,
+    per_world_fields=expand_fields,
+  )
+  scene.initialize(model, sim.model, sim.data, expanded_fields=sim.expanded_fields)
 
   return Env(scene, sim, device)
 
@@ -367,7 +371,7 @@ def test_shared_random(env):
 
 
 def test_single_env_without_expand(device):
-  """num_envs=1 works without expand_model_fields, no accumulation."""
+  """num_envs=1 works without per-world fields, no accumulation."""
   env = create_test_env(device, num_envs=1, expand_fields=())
   robot = env.scene["robot"]
   geom_idx = robot.indexing.geom_ids[0]
@@ -412,34 +416,6 @@ def test_partial_env_ids(env):
   # Envs 1,3 should be unchanged.
   assert result[1] == original[1]
   assert result[3] == original[3]
-
-
-# CUDA graph.
-
-
-@pytest.mark.skipif(
-  not torch.cuda.is_available(), reason="CUDA required for graph capture"
-)
-def test_expand_model_fields_recreates_cuda_graph(device):
-  """Verify CUDA graph is recreated after expand_model_fields."""
-  entity_cfg = EntityCfg(spec_fn=lambda: mujoco.MjSpec.from_string(ROBOT_XML))
-  scene_cfg = SceneCfg(num_envs=NUM_ENVS, entities={"robot": entity_cfg})
-  scene = Scene(scene_cfg, device)
-  model = scene.compile()
-
-  sim = Simulation(num_envs=NUM_ENVS, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(model, sim.model, sim.data)
-
-  if not sim.use_cuda_graph:
-    pytest.skip("CUDA graph capture not enabled on this device")
-
-  original_step_graph = sim.step_graph
-
-  sim.expand_model_fields(("geom_friction",))
-
-  assert sim.step_graph is not original_step_graph, (
-    "CUDA graph was not recreated after expand_model_fields"
-  )
 
 
 # Integration test.
@@ -1147,9 +1123,14 @@ def _make_geom_size_env(device, num_envs=NUM_ENVS):
   scene_cfg = SceneCfg(num_envs=num_envs, entities={"robot": entity_cfg})
   scene = Scene(scene_cfg, device)
   model = scene.compile()
-  sim = Simulation(num_envs=num_envs, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(model, sim.model, sim.data)
-  sim.expand_model_fields(("geom_size", "geom_rbound", "geom_aabb"))
+  sim = Simulation(
+    num_envs=num_envs,
+    cfg=SimulationCfg(),
+    model=model,
+    device=device,
+    per_world_fields=("geom_size", "geom_rbound", "geom_aabb"),
+  )
+  scene.initialize(model, sim.model, sim.data, expanded_fields=sim.expanded_fields)
   return Env(scene, sim, device)
 
 
@@ -1345,9 +1326,14 @@ def test_geom_size_raises_on_unsupported_type(device):
   scene_cfg = SceneCfg(num_envs=2, entities={"robot": entity_cfg})
   scene = Scene(scene_cfg, device)
   model = scene.compile()
-  sim = Simulation(num_envs=2, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(model, sim.model, sim.data)
-  sim.expand_model_fields(("geom_size", "geom_rbound", "geom_aabb"))
+  sim = Simulation(
+    num_envs=2,
+    cfg=SimulationCfg(),
+    model=model,
+    device=device,
+    per_world_fields=("geom_size", "geom_rbound", "geom_aabb"),
+  )
+  scene.initialize(model, sim.model, sim.data, expanded_fields=sim.expanded_fields)
   env = Env(scene, sim, device)
 
   plane_cfg = SceneEntityCfg("robot", geom_names=("floor",))
@@ -1389,16 +1375,19 @@ def _make_tendon_env(device, num_envs=NUM_ENVS):
   scene_cfg = SceneCfg(num_envs=num_envs, entities={"robot": entity_cfg})
   scene = Scene(scene_cfg, device)
   model = scene.compile()
-  sim = Simulation(num_envs=num_envs, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(model, sim.model, sim.data)
-  sim.expand_model_fields(
-    (
+  sim = Simulation(
+    num_envs=num_envs,
+    cfg=SimulationCfg(),
+    model=model,
+    device=device,
+    per_world_fields=(
       "tendon_damping",
       "tendon_stiffness",
       "tendon_frictionloss",
       "tendon_armature",
-    )
+    ),
   )
+  scene.initialize(model, sim.model, sim.data, expanded_fields=sim.expanded_fields)
 
   return Env(scene, sim, device)
 
@@ -1631,11 +1620,20 @@ def _make_mat_env(device, num_envs=NUM_ENVS):
   scene_cfg = SceneCfg(num_envs=num_envs, entities={"robot": entity_cfg})
   scene = Scene(scene_cfg, device)
   model = scene.compile()
-  sim = Simulation(num_envs=num_envs, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(model, sim.model, sim.data)
-  sim.expand_model_fields(
-    ("mat_rgba", "mat_emission", "mat_specular", "mat_shininess", "mat_texrepeat")
+  sim = Simulation(
+    num_envs=num_envs,
+    cfg=SimulationCfg(),
+    model=model,
+    device=device,
+    per_world_fields=(
+      "mat_rgba",
+      "mat_emission",
+      "mat_specular",
+      "mat_shininess",
+      "mat_texrepeat",
+    ),
   )
+  scene.initialize(model, sim.model, sim.data, expanded_fields=sim.expanded_fields)
   return Env(scene, sim, device)
 
 
@@ -1812,9 +1810,14 @@ def pair_env(device):
   scene_cfg = SceneCfg(num_envs=NUM_ENVS, entities={"robot": entity_cfg})
   scene = Scene(scene_cfg, device)
   model = scene.compile()
-  sim = Simulation(num_envs=NUM_ENVS, cfg=SimulationCfg(), model=model, device=device)
-  scene.initialize(model, sim.model, sim.data)
-  sim.expand_model_fields(("pair_friction",))
+  sim = Simulation(
+    num_envs=NUM_ENVS,
+    cfg=SimulationCfg(),
+    model=model,
+    device=device,
+    per_world_fields=("pair_friction",),
+  )
+  scene.initialize(model, sim.model, sim.data, expanded_fields=sim.expanded_fields)
   return Env(scene, sim, device)
 
 
