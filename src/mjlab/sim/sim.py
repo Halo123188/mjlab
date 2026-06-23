@@ -152,7 +152,6 @@ class SimulationCfg:
 
   Constraint arrays are batched by world: no world may have more than njmax
   constraints. If None, a heuristic value is used."""
-  ls_parallel: bool = True  # Boosts perf quite noticeably.
   contact_sensor_maxmatch: int = 64
   mujoco: MujocoCfg = field(default_factory=MujocoCfg)
   nan_guard: NanGuardCfg = field(default_factory=NanGuardCfg)
@@ -228,7 +227,6 @@ class Simulation:
 
     with wp.ScopedDevice(self.wp_device):
       self._wp_model = mjwarp.put_model(self._mj_model)
-      self._wp_model.opt.ls_parallel = self.cfg.ls_parallel
       self._wp_model.opt.contact_sensor_maxmatch = self.cfg.contact_sensor_maxmatch
       self._finish_init()
 
@@ -257,7 +255,6 @@ class Simulation:
       mujoco.mj_forward(self._mj_model, self._mj_data)
 
       self._wp_model = result.wp_model
-      self._wp_model.opt.ls_parallel = self.cfg.ls_parallel
       self._wp_model.opt.contact_sensor_maxmatch = self.cfg.contact_sensor_maxmatch
 
       # Snapshot variant-dependent fields as per-world defaults so

@@ -47,7 +47,6 @@ def test_simulation_config_is_piped(robot_xml, device):
 
   cfg = SimulationCfg(
     contact_sensor_maxmatch=128,
-    ls_parallel=False,
     mujoco=MujocoCfg(
       timestep=0.02,
       integrator="euler",
@@ -86,7 +85,6 @@ def test_simulation_config_is_piped(robot_xml, device):
 
   # SimulationCfg should be applied to wp_model.
   assert sim.wp_model.opt.contact_sensor_maxmatch == cfg.contact_sensor_maxmatch
-  assert sim.wp_model.opt.ls_parallel == cfg.ls_parallel
 
 
 def test_sim_reset_restores_initial_state(robot_xml, device):

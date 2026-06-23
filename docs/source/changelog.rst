@@ -24,6 +24,13 @@ Changed
 ^^^^^^^
 
 - Bumped ``rsl-rl-lib`` from 5.2.0 to 5.4.0.
+- Bumped ``mujoco`` to 3.9 and ``mujoco-warp`` to 3.10.
+
+  .. warning::
+
+     The ``SimulationCfg.ls_parallel`` option has been removed, since parallel
+     linesearch was removed upstream in MuJoCo Warp. Remove ``ls_parallel`` from
+     any ``SimulationCfg`` you construct.
 - Curriculum-mode terrain difficulty is now deterministic across rows
   and reaches the configured ``difficulty_range`` endpoints
   (:issue:`1027`).
