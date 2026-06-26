@@ -96,6 +96,21 @@ def yam_lift_cube_vision_env_cfg(
 ) -> ManagerBasedRlEnvCfg:
   cfg = yam_lift_cube_env_cfg(play=play)
 
+  # Override init pose: arm starts raised so the camera can see the workspace
+  # before reaching down. HOME_KEYFRAME (joint2=1.047, joint3=1.05) puts the
+  # end-effector near the floor, which is wrong for a vision task.
+  cfg.scene.entities["robot"].init_state = EntityCfg.InitialStateCfg(
+    pos=(0.0, 0.0, 0.01),
+    joint_pos={
+      "joint2": 0.4,
+      "joint3": 0.4,
+      "joint4": 0.0,
+      "left_finger": 0.0375 / 2,
+      "right_finger": -0.0375 / 2,
+    },
+    joint_vel={".*": 0.0},
+  )
+
   camera_names = ["robot/camera_d405"]
   cam_kwargs = {
     "robot/camera_d405": {
@@ -146,6 +161,11 @@ def yam_lift_cube_vision_env_cfg(
         "ranges": (0.0, 1.0),
       },
     )
+
+  # Disable ground collision termination for vision tasks: the task requires
+  # the end-effector to reach near floor level to pick up the cube, so this
+  # termination conflicts with the task itself. Joint limits protect the arm.
+  del cfg.terminations["ee_ground_collision"]
 
   # Pop privileged info from actor observations.
   actor_obs = cfg.observations["actor"]

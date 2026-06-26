@@ -1,3 +1,18 @@
+from mjlab.asset_zoo.robots.elephant_hand.constants import (
+  ELEPHANT_ACTION_SCALE as ELEPHANT_ACTION_SCALE,
+)
+from mjlab.asset_zoo.robots.elephant_hand.constants import (
+  get_elephant_arm_cfg as get_elephant_arm_cfg,
+)
+from mjlab.asset_zoo.robots.elephant_hand.constants import (
+  get_elephant_hand_cfg as get_elephant_hand_cfg,
+)
+from mjlab.asset_zoo.robots.flexiv_three_hand.constants import (
+  FLEXIV_ACTION_SCALE as FLEXIV_ACTION_SCALE,
+)
+from mjlab.asset_zoo.robots.flexiv_three_hand.constants import (
+  get_flexiv_robot_cfg as get_flexiv_robot_cfg,
+)
 from mjlab.asset_zoo.robots.i2rt_yam.yam_constants import (
   YAM_ACTION_SCALE as YAM_ACTION_SCALE,
 )

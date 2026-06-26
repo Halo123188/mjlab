@@ -71,5 +71,8 @@ def _configure_mediapy() -> None:
 
 
 _configure_warp()
-_configure_mediapy()
+try:
+  _configure_mediapy()
+except Exception:
+  pass
 _import_registered_packages()
